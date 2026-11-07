@@ -8,7 +8,7 @@
   "main": "_site/index.html",
   "scripts": {
     "build": "wireit",
-    "build:cloudflare": "npx playwright install chromium && npm run build:ts -w lit-dev-server && LITDEV_ENV=cloudflare npm run prod:build && node ../lit-dev-server/cloudflare-prepare.mjs",
+    "build:cloudflare": "npm run build:ts -w lit-dev-server && LITDEV_ENV=cloudflare npm run prod:build && node ../lit-dev-server/cloudflare-prepare.mjs",
     "build:ts": "wireit",
     "build:rollup": "wireit",
     "build:samples": "wireit",

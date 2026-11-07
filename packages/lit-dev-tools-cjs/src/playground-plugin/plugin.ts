@@ -5,7 +5,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import {BlockingRenderer} from './blocking-renderer.js';
+import {Highlighter} from './highlighter.js';
 import {outdent} from 'outdent';
 import * as fs from 'fs/promises';
 
@@ -25,7 +25,7 @@ interface EleventyConfig {
     shortcode: (content: string, ...args: any[]) => string | Promise<string>
   ): void;
   addMarkdownHighlighter(fn: (content: string, lang: any) => string): void;
-  on(name: string, fn: () => void): void;
+  on(name: string, fn: () => void | Promise<void>): void;
 }
 
 /**
@@ -74,7 +74,7 @@ const countVisibleLines = (filename: string, code: string): number => {
 };
 
 /**
- * Adds syntax highlighters using playground-elements.
+ * Adds syntax highlighters using Shiki (see ./highlighter.ts).
  *
  * Markdown fences:
  *
@@ -92,36 +92,28 @@ export const playgroundPlugin = (
   eleventyConfig: EleventyConfig,
   {
     sandboxUrl,
-    isDevMode,
     cdnBaseUrl,
   }: {sandboxUrl: string; isDevMode: boolean; cdnBaseUrl: string}
 ) => {
-  let renderer: BlockingRenderer | undefined;
+  let highlighter: Highlighter | undefined;
 
-  eleventyConfig.on('eleventy.before', () => {
-    renderer = new BlockingRenderer({isDevMode});
+  eleventyConfig.on('eleventy.before', async () => {
+    highlighter ??= await Highlighter.create();
   });
 
-  eleventyConfig.on('eleventy.after', async () => {
-    if (renderer) {
-      const old = renderer;
-      renderer = undefined;
-      await old.stop();
-    }
+  eleventyConfig.on('eleventy.after', () => {
+    highlighter?.dispose();
+    highlighter = undefined;
   });
 
-  const render = (
-    code: string,
-    lang: 'js' | 'ts' | 'html' | 'css',
-    makePre = false
-  ) => {
-    if (!renderer) {
+  const render = (code: string, lang: string, makePre = false) => {
+    if (!highlighter) {
       throw new Error(
-        'Internal error: expected Playground renderer to have been ' +
+        'Internal error: expected highlighter to have been ' +
           'initialized in "eleventy.before" event.'
       );
     }
-    const {html} = renderer.render(lang, outdent`${code}`);
+    const {html} = highlighter.render(lang, outdent`${code}`);
 
     // need to turn lines into pre tags to prevent minification in prod build
     if (makePre) {
