@@ -65,11 +65,21 @@ const prepareMainSite = async () => {
 
   // Redirects. The server canonicalizes paths to have a trailing slash before
   // consulting pageRedirects, so also emit the variant without the slash.
+  // Cloudflare rejects duplicate paths, and some pageRedirects entries already
+  // list both variants (e.g. /docs/releases/release-notes/1.3.0), so the
+  // first rule for a path wins.
   const lines = [];
+  const seen = new Set();
+  const addRedirect = (from, to) => {
+    if (!seen.has(from)) {
+      seen.add(from);
+      lines.push(`${from} ${to} 301`);
+    }
+  };
   for (const [from, to] of pageRedirects) {
-    lines.push(`${from} ${to} 301`);
+    addRedirect(from, to);
     if (from.endsWith('/') && from !== '/') {
-      lines.push(`${from.slice(0, -1)} ${to} 301`);
+      addRedirect(from.slice(0, -1), to);
     }
   }
   // Serve the tutorial viewer for /tutorials/<name>/ (see
