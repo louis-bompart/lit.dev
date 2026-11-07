@@ -214,7 +214,95 @@ const prod = environment({
   },
 });
 
-const environments = {dev, local, pr, prod};
+/**
+ * For a Workers Builds build of a non-production branch, return the URL of
+ * the same branch's Preview of the Worker at `workersDevUrl`, so that the main
+ * site's Preview uses the Playground sandbox's Preview. Otherwise, or when the
+ * Preview URL can't be predicted, return `workersDevUrl` unchanged.
+ *
+ * Preview URLs have the form `<preview-name>-<worker-name>.<subdomain>.workers.dev`
+ * (https://developers.cloudflare.com/workers/previews/), where
+ * `<preview-name>` is the branch name sanitized like Wrangler's
+ * `sanitizeBranchName`. A DNS label holds at most 63 characters; Cloudflare
+ * shortens longer ones in a way we can't predict, so those fall back to
+ * `workersDevUrl`.
+ */
+const cloudflarePreviewUrl = (workersDevUrl: string): string => {
+  const branch = process.env.WORKERS_CI_BRANCH;
+  const productionBranch = process.env.LITDEV_PRODUCTION_BRANCH || 'main';
+  const url = new URL(workersDevUrl);
+  if (
+    !branch ||
+    branch === productionBranch ||
+    !url.hostname.endsWith('.workers.dev')
+  ) {
+    return workersDevUrl;
+  }
+  const previewName = branch
+    .replace(/[^a-zA-Z0-9-]/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .toLowerCase();
+  const [workerName, ...rest] = url.hostname.split('.');
+  const label = `${previewName}-${workerName}`;
+  if (!/^[a-z]/.test(previewName) || label.length > 63) {
+    return workersDevUrl;
+  }
+  url.hostname = [label, ...rest].join('.');
+  return url.href;
+};
+
+/**
+ * lit.dev environment configuration for a static Cloudflare deployment.
+ *
+ * The main site and the Playground sandbox are deployed as two separate
+ * Workers with static assets (they must be on different origins). See
+ * packages/lit-dev-content/wrangler.jsonc and
+ * packages/lit-dev-playground/wrangler.jsonc.
+ *
+ * On non-production branches, the Playground sandbox URL points at the
+ * branch's sandbox Preview (see `cloudflarePreviewUrl`). Set
+ * LITDEV_PRODUCTION_BRANCH if the production branch is not `main`.
+ *
+ * Note there is no server in this setup, so the ports and GitHub client secret
+ * are unused.
+ */
+const cloudflare = environment({
+  get siteVersion() {
+    // WORKERS_CI_COMMIT_SHA is set by Cloudflare Workers Builds.
+    const sha =
+      process.env.WORKERS_CI_COMMIT_SHA ?? process.env.SHORT_SHA ?? 'unknown';
+    return `cloudflare-${sha.slice(0, 7)}`;
+  },
+  mainPort: 0, // Unused, static hosting.
+  playgroundPort: 0, // Unused, static hosting.
+  fakeGithubPort: undefined, // Does not run
+  eleventyMode: 'prod',
+  eleventyOutDir: '_site',
+  googleAnalyticsId: TEST_GOOGLE_ANALYTICS_ID,
+  reportCspViolations: false,
+  playgroundCdnBaseUrl: 'https://cdn.jsdelivr.net/npm',
+  get mainUrl() {
+    return stringEnv('LITDEV_MAIN_URL').replace(/\/$/, '');
+  },
+  get playgroundSandboxUrl() {
+    return cloudflarePreviewUrl(
+      stringEnv('LITDEV_PLAYGROUND_URL').replace(/\/?$/, '/')
+    );
+  },
+  githubMainUrl: 'https://github.com/',
+  githubApiUrl: 'https://api.github.com/',
+  githubAvatarUrl: 'https://avatars.githubusercontent.com/',
+  get githubAuthorizeRedirectUrl() {
+    return `${this.mainUrl}/playground/signin/`;
+  },
+  // GitHub sign-in (for sharing playground projects as gists) requires the
+  // server-side token exchange, which is not available on static hosting.
+  githubClientId: FAKE_GITHUB_CLIENT_ID,
+  githubClientSecret: FAKE_GITHUB_CLIENT_SECRET,
+});
+
+const environments = {dev, local, pr, prod, cloudflare};
 
 /**
  * Return the environment configuration matching the LITDEV_ENV environment
