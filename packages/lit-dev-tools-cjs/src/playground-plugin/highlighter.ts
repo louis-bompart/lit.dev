@@ -170,14 +170,17 @@ const THEME = {
 };
 
 /**
- * Shiki grammars to load. `es-tag-html` and `es-tag-css` highlight the
- * contents of Lit's html`...` and css`...` tagged templates in JS and TS.
+ * Shiki grammars to load. `ts-tags` ("TypeScript with Tags", alias `lit`) is
+ * TypeScript plus the es-tag-* injection grammars. Those inject into every
+ * JS/TS grammar, so loading it highlights the contents of Lit's html`...` and
+ * css`...` tagged templates in plain `js`, `ts`, `jsx` and `tsx` snippets too.
  */
 const LANGUAGES = [
   'javascript',
   'typescript',
   'jsx',
   'tsx',
+  'ts-tags',
   'html',
   'css',
   'json',
@@ -185,7 +188,6 @@ const LANGUAGES = [
   'xml',
   'markdown',
 ];
-const INJECTED_LANGUAGES = ['es-tag-html', 'es-tag-css'];
 
 /** Fence and shortcode language names, mapped to Shiki language IDs. */
 const LANGUAGE_ALIASES: Record<string, string> = {
@@ -231,14 +233,9 @@ export class Highlighter {
 
   static async create(): Promise<Highlighter> {
     const {createHighlighter} = await importFromHere('shiki');
-    const injected = await Promise.all(
-      INJECTED_LANGUAGES.map(
-        async (id) => (await importFromHere(`@shikijs/langs/${id}`)).default
-      )
-    );
     const shiki = (await createHighlighter({
       themes: [THEME],
-      langs: [...LANGUAGES, ...injected.flat()],
+      langs: LANGUAGES,
     })) as ShikiHighlighter;
     return new Highlighter(shiki);
   }

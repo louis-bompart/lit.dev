@@ -38,7 +38,6 @@
     }
   },
   "dependencies": {
-    "@shikijs/langs": "3.23.0",
     "@types/jsdom": "^16.2.13",
     "@types/strip-comments": "^2.0.1",
     "@web/dev-server": "^0.1.6",
