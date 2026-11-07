@@ -2,8 +2,11 @@
 // assets. It must be on a different origin than the main site
 // (packages/lit-dev-content/wrangler.jsonc).
 //
-// Workers Builds settings: root directory packages/lit-dev-playground,
-// build command `npm run build`, default deploy commands.
+// Workers Builds settings (root directory: the repository root `/`):
+//   Build command:  npm run build -w lit-dev-playground
+//   Deploy command: npx wrangler deploy -c packages/lit-dev-playground/wrangler.jsonc
+//   Non-production deploy command:
+//     npx wrangler versions upload -c packages/lit-dev-playground/wrangler.jsonc
 {
   "name": "lit-dev-playground",
   "compatibility_date": "2025-11-01",

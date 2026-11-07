@@ -20,7 +20,7 @@
  *   - Pre-compressed .br/.gz files are removed (Cloudflare compresses on the
  *     fly, and they would otherwise count against the asset file limit).
  *
- * Usage: run as part of `npm run build:cloudflare` in lit-dev-content.
+ * Usage: run as part of `npm run build:cloudflare -w lit-dev-content`.
  */
 
 import * as fs from 'fs/promises';

@@ -1,8 +1,11 @@
 // lit.dev main site, deployed as a Cloudflare Worker with static assets.
 //
-// Workers Builds settings: root directory packages/lit-dev-content, build
-// command `npm run build:cloudflare`, default deploy commands, and these
-// build variables:
+// Workers Builds settings (root directory: the repository root `/`):
+//   Build command:  npm run build:cloudflare -w lit-dev-content
+//   Deploy command: npx wrangler deploy -c packages/lit-dev-content/wrangler.jsonc
+//   Non-production deploy command:
+//     npx wrangler versions upload -c packages/lit-dev-content/wrangler.jsonc
+// and these build variables:
 //   LITDEV_MAIN_URL        Public URL of this Worker, e.g.
 //                          https://lit-dev.<subdomain>.workers.dev
 //   LITDEV_PLAYGROUND_URL  Public URL of the playground sandbox Worker
