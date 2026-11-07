@@ -42,6 +42,7 @@ const TOKEN_CLASSES: Array<[className: string, scopes: string[]]> = [
       'entity.name.tag',
       'keyword.operator.type.annotation',
       'storage.type.function.arrow',
+      'keyword.operator.spread',
     ],
   ],
   ['tok-comment', ['comment', 'punctuation.definition.comment']],
@@ -56,7 +57,15 @@ const TOKEN_CLASSES: Array<[className: string, scopes: string[]]> = [
       'variable.language',
     ],
   ],
-  ['tok-operator', ['keyword.operator', 'punctuation.accessor']],
+  [
+    'tok-operator',
+    [
+      'keyword.operator',
+      'punctuation.accessor',
+      // The `=` between an HTML attribute and its value.
+      'punctuation.separator.key-value.html',
+    ],
+  ],
   ['tok-string', ['string', 'support.type.property-name.json']],
   [
     'tok-string2',
@@ -119,7 +128,7 @@ const TOKEN_CLASSES: Array<[className: string, scopes: string[]]> = [
       'entity.other.attribute-name.pseudo-class.css',
     ],
   ],
-  ['tok-meta', ['meta.decorator punctuation.decorator', 'meta.tag.metadata']],
+  ['tok-meta', ['meta.decorator punctuation.decorator']],
   [
     'tok-tagName',
     [
