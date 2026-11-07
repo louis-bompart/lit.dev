@@ -214,7 +214,50 @@ const prod = environment({
   },
 });
 
-const environments = {dev, local, pr, prod};
+/**
+ * lit.dev environment configuration for a static Cloudflare deployment.
+ *
+ * The main site and the Playground sandbox are deployed as two separate
+ * Workers with static assets (they must be on different origins). See
+ * wrangler.jsonc and wrangler.playground.jsonc at the repo root.
+ *
+ * Note there is no server in this setup, so the ports and GitHub client secret
+ * are unused.
+ */
+const cloudflare = environment({
+  get siteVersion() {
+    // WORKERS_CI_COMMIT_SHA is set by Cloudflare Workers Builds.
+    const sha =
+      process.env.WORKERS_CI_COMMIT_SHA ?? process.env.SHORT_SHA ?? 'unknown';
+    return `cloudflare-${sha.slice(0, 7)}`;
+  },
+  mainPort: 0, // Unused, static hosting.
+  playgroundPort: 0, // Unused, static hosting.
+  fakeGithubPort: undefined, // Does not run
+  eleventyMode: 'prod',
+  eleventyOutDir: '_site',
+  googleAnalyticsId: TEST_GOOGLE_ANALYTICS_ID,
+  reportCspViolations: false,
+  playgroundCdnBaseUrl: 'https://cdn.jsdelivr.net/npm',
+  get mainUrl() {
+    return stringEnv('LITDEV_MAIN_URL').replace(/\/$/, '');
+  },
+  get playgroundSandboxUrl() {
+    return stringEnv('LITDEV_PLAYGROUND_URL').replace(/\/?$/, '/');
+  },
+  githubMainUrl: 'https://github.com/',
+  githubApiUrl: 'https://api.github.com/',
+  githubAvatarUrl: 'https://avatars.githubusercontent.com/',
+  get githubAuthorizeRedirectUrl() {
+    return `${this.mainUrl}/playground/signin/`;
+  },
+  // GitHub sign-in (for sharing playground projects as gists) requires the
+  // server-side token exchange, which is not available on static hosting.
+  githubClientId: FAKE_GITHUB_CLIENT_ID,
+  githubClientSecret: FAKE_GITHUB_CLIENT_SECRET,
+});
+
+const environments = {dev, local, pr, prod, cloudflare};
 
 /**
  * Return the environment configuration matching the LITDEV_ENV environment
