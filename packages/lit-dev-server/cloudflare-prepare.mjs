@@ -5,25 +5,26 @@
  */
 
 /**
- * Prepares static output directories for deployment to Cloudflare Pages.
+ * Prepares static output directories for deployment as Cloudflare Workers
+ * static assets (see wrangler.jsonc and wrangler.playground.jsonc at the repo
+ * root).
  *
  * On Cloud Run, lit.dev is served by the Koa server in ./src/server.ts. On
- * Cloudflare Pages there is no server, so this script translates what the
- * server does into Cloudflare Pages conventions:
+ * Cloudflare there is no server, so this script translates what the server
+ * does into Cloudflare static asset conventions:
  *
  * Main site (packages/lit-dev-content/_site):
  *   - Page redirects (./src/redirects.ts)  -> _redirects
  *   - /tutorials/* rewrite                 -> _redirects (200 rewrite)
  *   - 404 page                             -> 404.html
  *   - Pre-compressed .br/.gz files are removed (Cloudflare compresses on the
- *     fly, and they would otherwise count against the Pages file limit).
+ *     fly, and they would otherwise count against the asset file limit).
  *
  * Playground sandbox (node_modules/playground-elements):
  *   - Copied to packages/lit-dev-server/cloudflare-playground-out
  *   - Origin-Agent-Cluster header -> _headers
  *
- * Usage (after `npm run build:ts -w lit-dev-server` and the Eleventy build):
- *   node packages/lit-dev-server/cloudflare-pages-prepare.mjs
+ * Usage: run as part of `npm run build:cloudflare` at the repo root.
  */
 
 import * as fs from 'fs/promises';
@@ -66,7 +67,7 @@ const prepareMainSite = async () => {
   });
   console.log(`Removed ${removed} pre-compressed files`);
 
-  // Cloudflare Pages serves /404.html for unmatched paths.
+  // Served for unmatched paths (not_found_handling: "404-page" in wrangler.jsonc).
   await fs.copyFile(
     path.join(siteDir, '404', 'index.html'),
     path.join(siteDir, '404.html')

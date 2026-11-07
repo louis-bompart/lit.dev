@@ -214,18 +214,21 @@ const prod = environment({
 });
 
 /**
- * lit.dev environment configuration for a static Cloudflare Pages deployment.
+ * lit.dev environment configuration for a static Cloudflare deployment.
  *
  * The main site and the Playground sandbox are deployed as two separate
- * Cloudflare Pages projects (they must be on different origins). See
- * .github/workflows/deploy-cloudflare-pages.yml.
+ * Workers with static assets (they must be on different origins). See
+ * wrangler.jsonc and wrangler.playground.jsonc at the repo root.
  *
  * Note there is no server in this setup, so the ports and GitHub client secret
  * are unused.
  */
 const cloudflare = environment({
   get siteVersion() {
-    return `cloudflare-${stringEnv('SHORT_SHA')}`;
+    // WORKERS_CI_COMMIT_SHA is set by Cloudflare Workers Builds.
+    const sha =
+      process.env.WORKERS_CI_COMMIT_SHA ?? process.env.SHORT_SHA ?? 'unknown';
+    return `cloudflare-${sha.slice(0, 7)}`;
   },
   mainPort: 0, // Unused, static hosting.
   playgroundPort: 0, // Unused, static hosting.
