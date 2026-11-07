@@ -10,8 +10,6 @@
   ],
   "scripts": {
     "build": "wireit",
-    "build:cloudflare": "npx playwright install chromium && npm run build:ts -w lit-dev-server && LITDEV_ENV=cloudflare npm run prod:build -w lit-dev-content && node packages/lit-dev-server/cloudflare-prepare.mjs",
-    "deploy:cloudflare": "npx wrangler deploy -c wrangler.playground.jsonc && npx wrangler deploy",
     "start": "wireit",
     "start:fake-github": "wireit",
     "dev": "npm run dev:serve --workspace lit-dev-content --watch",

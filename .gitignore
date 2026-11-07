@@ -30,4 +30,4 @@ test-results
 
 .wireit
 .highlights_cache
-packages/lit-dev-server/cloudflare-playground-out
+packages/lit-dev-playground/dist

@@ -5,9 +5,9 @@
  */
 
 /**
- * Prepares static output directories for deployment as Cloudflare Workers
- * static assets (see wrangler.jsonc and wrangler.playground.jsonc at the repo
- * root).
+ * Prepares the main site build for deployment as Cloudflare Workers static
+ * assets (see packages/lit-dev-content/wrangler.jsonc). The Playground
+ * sandbox is a separate Worker in packages/lit-dev-playground.
  *
  * On Cloud Run, lit.dev is served by the Koa server in ./src/server.ts. On
  * Cloudflare there is no server, so this script translates what the server
@@ -20,11 +20,7 @@
  *   - Pre-compressed .br/.gz files are removed (Cloudflare compresses on the
  *     fly, and they would otherwise count against the asset file limit).
  *
- * Playground sandbox (node_modules/playground-elements):
- *   - Copied to packages/lit-dev-server/cloudflare-playground-out
- *   - Origin-Agent-Cluster header -> _headers
- *
- * Usage: run as part of `npm run build:cloudflare` at the repo root.
+ * Usage: run as part of `npm run build:cloudflare` in lit-dev-content.
  */
 
 import * as fs from 'fs/promises';
@@ -35,12 +31,6 @@ import {pageRedirects} from './lib/redirects.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');
 const siteDir = path.join(repoRoot, 'packages', 'lit-dev-content', '_site');
-const playgroundSrcDir = path.join(
-  repoRoot,
-  'node_modules',
-  'playground-elements'
-);
-const playgroundOutDir = path.join(__dirname, 'cloudflare-playground-out');
 
 const walk = async function* (dir) {
   for (const entry of await fs.readdir(dir, {withFileTypes: true})) {
@@ -103,22 +93,4 @@ const prepareMainSite = async () => {
   );
 };
 
-const preparePlayground = async () => {
-  await fs.rm(playgroundOutDir, {recursive: true, force: true});
-  await fs.cp(playgroundSrcDir, playgroundOutDir, {
-    recursive: true,
-    dereference: true,
-    filter: (src) =>
-      path.relative(playgroundSrcDir, src).split(path.sep)[0] !==
-      'node_modules',
-  });
-  // See https://github.com/PolymerLabs/playground-elements#process-isolation
-  await fs.writeFile(
-    path.join(playgroundOutDir, '_headers'),
-    '/*\n  Origin-Agent-Cluster: ?1\n'
-  );
-  console.log(`Wrote playground sandbox to ${playgroundOutDir}`);
-};
-
 await prepareMainSite();
-await preparePlayground();

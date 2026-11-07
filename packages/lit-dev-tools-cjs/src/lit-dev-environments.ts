@@ -219,7 +219,8 @@ const prod = environment({
  *
  * The main site and the Playground sandbox are deployed as two separate
  * Workers with static assets (they must be on different origins). See
- * wrangler.jsonc and wrangler.playground.jsonc at the repo root.
+ * packages/lit-dev-content/wrangler.jsonc and
+ * packages/lit-dev-playground/wrangler.jsonc.
  *
  * Note there is no server in this setup, so the ports and GitHub client secret
  * are unused.
