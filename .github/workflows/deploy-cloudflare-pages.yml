@@ -1,0 +1,88 @@
+# Deploys lit.dev as a static site to Cloudflare Pages.
+#
+# Two Cloudflare Pages projects are used, because the Playground sandbox must
+# be served from a different origin than the main site:
+#
+#   - Main site:          packages/lit-dev-content/_site
+#   - Playground sandbox: playground-elements (from node_modules)
+#
+# One-time setup: create both projects (Direct Upload) in the Cloudflare
+# dashboard, or with:
+#   npx wrangler pages project create lit-dev --production-branch=main
+#   npx wrangler pages project create lit-dev-playground --production-branch=main
+#
+# Required repository secrets:
+#   CLOUDFLARE_API_TOKEN   API token with "Cloudflare Pages: Edit" permission.
+#   CLOUDFLARE_ACCOUNT_ID  Cloudflare account ID.
+#
+# Optional repository variables (Settings > Secrets and variables > Variables):
+#   CF_PAGES_PROJECT             Main site project name (default: lit-dev)
+#   CF_PAGES_PLAYGROUND_PROJECT  Playground project name
+#                                (default: lit-dev-playground)
+#   LITDEV_MAIN_URL              Public URL of the main site
+#                                (default: https://<CF_PAGES_PROJECT>.pages.dev)
+#   LITDEV_PLAYGROUND_URL        Public URL of the playground sandbox
+#                                (default: https://<CF_PAGES_PLAYGROUND_PROJECT>.pages.dev/)
+#
+# Set the URL variables if your projects use a custom domain, or if Cloudflare
+# assigned a different *.pages.dev subdomain than the project name.
+
+name: Deploy to Cloudflare Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-cloudflare-pages
+  cancel-in-progress: true
+
+env:
+  CF_PAGES_PROJECT: ${{ vars.CF_PAGES_PROJECT || 'lit-dev' }}
+  CF_PAGES_PLAYGROUND_PROJECT: ${{ vars.CF_PAGES_PLAYGROUND_PROJECT || 'lit-dev-playground' }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      deployments: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: npm
+          cache-dependency-path: '**/package-lock.json'
+
+      - run: npm ci
+      # Chromium is used during the Eleventy build to pre-render playgrounds.
+      - run: npx playwright install --with-deps chromium
+
+      - name: Build
+        env:
+          LITDEV_ENV: cloudflare
+          SHORT_SHA: ${{ github.sha }}
+          LITDEV_MAIN_URL: ${{ vars.LITDEV_MAIN_URL || format('https://{0}.pages.dev', env.CF_PAGES_PROJECT) }}
+          LITDEV_PLAYGROUND_URL: ${{ vars.LITDEV_PLAYGROUND_URL || format('https://{0}.pages.dev/', env.CF_PAGES_PLAYGROUND_PROJECT) }}
+        run: |
+          npm run build:ts -w lit-dev-server
+          npm run prod:build -w lit-dev-content
+          node packages/lit-dev-server/cloudflare-pages-prepare.mjs
+
+      - name: Deploy playground sandbox
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy packages/lit-dev-server/cloudflare-playground-out --project-name=${{ env.CF_PAGES_PLAYGROUND_PROJECT }} --branch=main --commit-dirty=true
+
+      - name: Deploy main site
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+          command: pages deploy packages/lit-dev-content/_site --project-name=${{ env.CF_PAGES_PROJECT }} --branch=main --commit-dirty=true
